@@ -1,10 +1,13 @@
 import { Battle, WORLD, AMMO, clamp } from './engine.mjs';
-import { Renderer, drawPet } from './renderer.mjs';
+import { Renderer, drawPet, loadAssets } from './renderer.mjs';
 const $=id=>document.getElementById(id);
 const battle=new Battle(),canvas=$('game'),renderer=new Renderer(canvas,battle);
 let drag=null,last=0,accumulator=0,lastRevision=-1,sound=false,audio=null;
 const teamNames=['喵喵小队','汪汪小队'];
-const ammoIcons={paw:'🐾',bone:'🦴',burst:'🐟'};
+const ammoIcons={paw:'claw-shot',bone:'zbranch00_0',burst:'badge'};
+try { await loadAssets(); $('loading').hidden=true; } catch(error) { $('loading').textContent='素材加载失败，请刷新重试'; throw error; }
+let noticeUntil=0,previousTurn=-1;
+const resizeObserver=new ResizeObserver(()=>renderer.resize());resizeObserver.observe(canvas);
 function tone(type){
   if(!sound)return;
   try{
@@ -26,16 +29,18 @@ function makePetCards(){
 }
 for(const [id,a] of Object.entries(AMMO)){
   const button=document.createElement('button');button.className='ammo-card';button.dataset.ammo=id;
-  button.innerHTML=`<span class="ammo-icon" aria-hidden="true">${ammoIcons[id]}</span><span class="ammo-name">${a.name}</span><span class="ammo-note">${a.note.split(' · ')[0]}</span>`;
+  button.innerHTML=`<img class="ammo-icon" src="./assets/original/${ammoIcons[id]}.png" alt=""><span class="ammo-name">${a.name}</span><span class="ammo-note">${a.note.split(' · ')[0]}</span>`;
   button.title=a.note;button.addEventListener('click',()=>{battle.setAmmo(id);sync();});$('ammoList').append(button);
 }
 function sync(){
   const aiming=battle.phase==='aim',cat=battle.turn===0;
-  $('roundLabel').textContent=`第 ${battle.round} 回合`;
-  $('turnLabel').textContent=battle.phase==='over'?'本局已结束':`${teamNames[battle.turn]}${aiming?'，轮到你啦':'正在出招'}`;
-  $('turnLabel').style.color=cat?'#b1874d':'#658469';
+  $('roundLabel').textContent=`第 ${battle.round} 回合`;$('roundNumber').textContent=battle.round;
+  if(previousTurn!==battle.turn){previousTurn=battle.turn;noticeUntil=performance.now()+1600;}
+  for(const t of [0,1])$(t===0?'catHealth':'dogHealth').style.width=`${battle.pets.filter(p=>p.team===t&&p.alive).reduce((a,p)=>a+p.hp,0)/3}%`;
+  $('turnLabel').textContent=battle.phase==='over'?'本局结束':teamNames[battle.turn];
+  $('turnLabel').style.color=cat?'#fff2bc':'#d9efb5';
   $('phaseLabel').textContent=({aim:'选择角色，拖拽瞄准',flight:'让毛球飞一会儿…',resolve:'正在结算这一发',over:'再来一局，换你先挑战'})[battle.phase];
-  $('stageTip').textContent=({aim:`${teamNames[battle.turn]}出战 · 向后拉，松手发射`,flight:'瞄准绳索，也许一击就能打落对手',resolve:'马上交换回合…',over:'友谊第一，毛球第二'})[battle.phase];
+  $('stageTip').textContent=({aim:`${teamNames[battle.turn]}的回合`,flight:'发射！',resolve:'回合结束',over:'对战结束'})[battle.phase];
   for(const team of [0,1])$(team===0?'catLives':'dogLives').innerHTML=battle.pets.filter(p=>p.team===team).map(p=>`<span class="life ${p.alive?'':'out'}" title="${p.name}${p.alive?'还在场':'已出局'}"></span>`).join('');
   if(Number($('petList').dataset.team)!==battle.turn||!$('petList').children.length){makePetCards();$('petList').dataset.team=battle.turn;}
   for(const button of $('petList').children){const p=battle.pets[Number(button.dataset.pet)];button.disabled=!aiming||!p.alive;button.classList.toggle('selected',p.id===battle.selected);button.classList.toggle('out',!p.alive);button.setAttribute('aria-pressed',String(p.id===battle.selected));button.setAttribute('aria-label',`${p.name}，生命${p.hp}，绳索${p.ropeHp}`);button.querySelector('.pet-hp').textContent=p.alive?`生命 ${p.hp} · 绳 ${p.ropeHp}`:'已落水';}
@@ -48,15 +53,20 @@ function sync(){
   lastRevision=battle.revision;
 }
 function reset(){drag=null;renderer.drag=null;battle.reset();renderer.effects=[];accumulator=0;sync();}
-function shoot(){if($('help').open||$('features').open)return;drag=null;renderer.drag=null;battle.shoot();sync();}
-for(const id of ['restartButton','againButton'])$(id).addEventListener('click',reset);
+function shoot(){if($('help').open||$('features').open)return;drag=null;renderer.drag=null;if(battle.shoot())toggleAssistant(false);sync();}
+for(const id of ['restartButton','againButton'])$(id).addEventListener('click',()=>{reset();if($('help').open)$('help').close();});
 $('fireButton').addEventListener('click',shoot);
 for(const id of ['angle','power'])$(id).addEventListener('input',()=>{battle.setAim(Number($('angle').value),Number($('power').value));sync();});
-$('soundButton').addEventListener('click',()=>{sound=!sound;$('soundButton').textContent=`音效：${sound?'开':'关'}`;$('soundButton').setAttribute('aria-label',sound?'关闭音效':'开启音效');$('soundButton').setAttribute('aria-pressed',String(sound));if(sound)tone('shoot');});
-$('helpButton').addEventListener('click',()=>$('help').showModal());$('featuresButton').addEventListener('click',()=>$('features').showModal());
+$('soundButton').addEventListener('click',()=>{sound=!sound;$('soundLabel').textContent=`音效：${sound?'开':'关'}`;$('soundButton').setAttribute('aria-label',sound?'关闭音效':'开启音效');$('soundButton').setAttribute('aria-pressed',String(sound));if(sound)tone('shoot');});
+$('helpButton').addEventListener('click',()=>$('help').showModal());$('featuresButton').addEventListener('click',()=>{$('help').close();$('features').showModal();});
 document.querySelectorAll('[data-close]').forEach(button=>button.addEventListener('click',()=>$(button.dataset.close).close()));
 for(const id of ['help','features'])$(id).addEventListener('click',e=>{if(e.target===$(id)){const r=$(id).getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)$(id).close();}});
-function coords(e){const r=canvas.getBoundingClientRect();return {x:(e.clientX-r.left)/r.width*WORLD.width,y:(e.clientY-r.top)/r.height*WORLD.height};}
+function coords(e){const r=canvas.getBoundingClientRect();return renderer.screenToWorld(e.clientX-r.left,e.clientY-r.top);}
+function toggleAssistant(open){$('aimAssistant').hidden=!open;$('controlsButton').setAttribute('aria-expanded',String(open));}
+$('controlsButton').addEventListener('click',()=>toggleAssistant($('aimAssistant').hidden));$('closeAssistant').addEventListener('click',()=>toggleAssistant(false));
+function updateOrientation(){ $('battleScreen').inert=matchMedia('(orientation:portrait)').matches&&!document.body.classList.contains('portrait-preview');renderer.resize();}
+$('portraitPreview').addEventListener('click',()=>{document.body.classList.add('portrait-preview');updateOrientation();});
+window.addEventListener('resize',updateOrientation);updateOrientation();
 canvas.addEventListener('pointerdown',e=>{
   if(e.button!==0||battle.phase!=='aim')return;const pos=coords(e);
   const p=battle.living(battle.turn).find(p=>Math.hypot(p.x-pos.x,p.y-pos.y)<52);
@@ -85,6 +95,6 @@ function frame(timestamp){
   const elapsed=last?Math.min((timestamp-last)/1000,.08):0;last=timestamp;
   if(!$('help').open&&!$('features').open){accumulator+=elapsed;while(accumulator>=WORLD.step){battle.step(WORLD.step);accumulator-=WORLD.step;}}
   const events=battle.events.splice(0);renderer.consume(events);for(const e of events)tone(e.type);
-  if(lastRevision!==battle.revision)sync();renderer.draw(elapsed);requestAnimationFrame(frame);
+  if(lastRevision!==battle.revision)sync();$('turnNotice').classList.toggle('visible',performance.now()<noticeUntil&&battle.phase==='aim');renderer.draw(elapsed);requestAnimationFrame(frame);
 }
 sync();requestAnimationFrame(frame);
