@@ -16,7 +16,7 @@
 | 推荐部署 | 使用服务器现有静态网站服务发布 `dist/` |
 | 备用运行方式 | 用仓库自带 Node.js 静态服务器提供 HTTP（网页传输）服务 |
 
-运行必须保留的文件为：`dist/index.html`、`dist/style.css`、`dist/app.mjs`、`dist/engine.mjs`、`dist/renderer.mjs`。
+运行必须保留的文件为：`dist/index.html`、`dist/style.css`、`dist/app.mjs`、`dist/engine.mjs`、`dist/renderer.mjs`、`dist/audio.mjs`，以及完整 `dist/assets/`。2026-11-01 增加本地背景音乐 `dist/assets/audio/forest-battle.mp3`；`.mp3` 应返回 `audio/mpeg`，自带服务器已支持。
 
 无需上传采集缓存、解包资料、预览图或其他项目。仓库中的 `tests/`、`README.md`、`DEPLOY.md`、`VALIDATION.md` 与 `package.json` 用于开发和验证，不应作为公开网站根目录。`dist/` 内文件虽名为发布产物，也就是本版可直接修改的源代码，不要忽略或删除。
 

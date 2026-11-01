@@ -1,0 +1,21 @@
+{
+  "title": "战斗_背景乐_章节1_青青树林",
+  "source_apk_url": "https://1768297722dotgame-apk.3741.95599.sh.cn/apk10/2025-09-28/8ac7e2de-ff38-4298-99b0-f99803621406.apk",
+  "source_manifest": {
+    "versionCode": 264,
+    "versionName": "3.0.3",
+    "installLocation": 0,
+    "compileSdkVersion": 23,
+    "compileSdkVersionCodename": "6.0-2438415",
+    "package": "com.kafeiniu.ghjm.aligames",
+    "platformBuildVersionCode": 29,
+    "platformBuildVersionName": 10
+  },
+  "metadata_entry": "assets/bin/Data/ecfe7b45c7497e44cb9109adff970c97",
+  "resource_entry": "assets/bin/Data/ecfe7b45c7497e44cb9109adff970c97.resource",
+  "resource_crc32": 744089946,
+  "duration_seconds": 60.029388427734375,
+  "output": "pet-battle/dist/assets/audio/forest-battle.mp3",
+  "sha256": "1b1901fc95885bf60b77e0a2b017f2c8dc49547f61685cf67510d753f8863281",
+  "encoding": "MP3 128 kbps 44100 Hz stereo"
+}

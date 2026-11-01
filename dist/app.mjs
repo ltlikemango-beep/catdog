@@ -1,11 +1,13 @@
 import { Battle, WORLD, AMMO, clamp } from './engine.mjs';
 import { Renderer, drawPet, loadAssets } from './renderer.mjs';
+import { setupMusic } from './audio.mjs';
 const $=id=>document.getElementById(id);
 const battle=new Battle(),canvas=$('game'),renderer=new Renderer(canvas,battle);
 let drag=null,last=0,accumulator=0,lastRevision=-1,sound=false,audio=null;
 const teamNames=['喵喵小队','汪汪小队'];
 const ammoIcons={paw:'claw-shot',bone:'zbranch00_0',burst:'badge'};
 try { await loadAssets(); $('loading').hidden=true; } catch(error) { $('loading').textContent='素材加载失败，请刷新重试'; throw error; }
+setupMusic();
 let noticeUntil=0,previousTurn=-1;
 const resizeObserver=new ResizeObserver(()=>renderer.resize());resizeObserver.observe(canvas);
 function tone(type){
